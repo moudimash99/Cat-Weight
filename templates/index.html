@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maine Coon Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🐱 Simba & Nala Growth Tracker</h1>
+        
+        <div class="card">
+            <h3>Add New Measurement</h3>
+            <form action="/add" method="POST" class="entry-form">
+                <select name="cat_name" required>
+                    <option value="Simba">Simba</option>
+                    <option value="Nala">Nala</option>
+                </select>
+                
+                <input type="number" step="0.001" name="weight" placeholder="Weight (kg)" required>
+                
+                <input type="date" name="date" value="{{ today }}" required>
+                
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <input type="checkbox" id="time-toggle" style="width: auto; margin: 0;">
+                    <label for="time-toggle" style="font-size: 14px; user-select: none;">Set Time?</label>
+                </div>
+
+                <input type="time" name="time" id="time-input" style="display: none;">
+
+                <button type="submit">Add Entry</button>
+            </form>
+        </div>
+
+        <div class="card chart-container">
+            {% if simba_plot and nala_plot %}
+                <div class="charts-row">
+                    <div id="simba-chart" class="chart-box"></div>
+                    <div id="nala-chart" class="chart-box"></div>
+                </div>
+                
+                <script>
+                    // Render Simba's Chart
+                    const simbaData = {{ simba_plot | tojson }};
+                    Plotly.newPlot('simba-chart', simbaData.data, simbaData.layout);
+
+                    // Render Nala's Chart
+                    const nalaData = {{ nala_plot | tojson }};
+                    Plotly.newPlot('nala-chart', nalaData.data, nalaData.layout);
+                    
+                    // Debug: check what we received
+                    console.log("SIMBA:", simbaData);
+                    console.log("NALA:", nalaData);
+                </script>
+            {% else %}
+                <p style="text-align:center;">No data yet. Run <code>python init_db.py</code> to load data!</p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h3>History</h3>
+            <div class="table-wrapper">
+                {% if table_data %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Cat Name</th>
+                                <th>Date & Time</th>
+                                <th>Weight (kg)</th>
+                                <th style="width: 40px; text-align: center;">Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in table_data %}
+                                <tr>
+                                    <td>{{ row[1] }}</td>
+                                    <td>{{ row[2] }}</td>
+                                    <td>{{ row[3] }}</td>
+                                    <td style="text-align: center;">
+                                        <form method="POST" action="/delete/{{ row[0] }}" style="display: inline;">
+                                            <button type="submit" class="delete-btn" title="Delete entry" onclick="return confirm('Are you sure?');">✕</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>No data.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const timeToggle = document.getElementById('time-toggle');
+        const timeInput = document.getElementById('time-input');
+
+        // Pre-fill with current time
+        function setCurrentTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            timeInput.value = `${hours}:${minutes}`;
+        }
+
+        timeToggle.addEventListener('change', function() {
+            if (this.checked) {
+                setCurrentTime();
+                timeInput.style.display = 'block';
+                timeInput.required = true; // Make it required if shown
+            } else {
+                timeInput.style.display = 'none';
+                timeInput.required = false;
+                timeInput.value = ''; // Clear value if hidden
+            }
+        });
+    </script>
+
+</body>
+</html>
