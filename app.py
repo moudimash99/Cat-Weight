@@ -145,7 +145,7 @@ def logout():
 def index():
     # Check if user is logged in
     if 'user' not in session:
-        session['user'] = 'guest'  # Temporary: bypass login
+        return redirect(url_for('login'))
     
     conn = sqlite3.connect(DB_NAME)
     try:
@@ -184,7 +184,7 @@ def index():
 @app.route('/add', methods=['POST'])
 def add_entry():
     if 'user' not in session:
-        session['user'] = 'guest'  # Temporary: bypass login
+        return redirect(url_for('login'))
     
     cat = request.form.get('cat_name')
     weight = request.form.get('weight')
@@ -209,7 +209,7 @@ def add_entry():
 @app.route('/delete/<int:entry_id>', methods=['POST'])
 def delete_entry(entry_id):
     if 'user' not in session:
-        session['user'] = 'guest'  # Temporary: bypass login
+        return redirect(url_for('login'))
     
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
