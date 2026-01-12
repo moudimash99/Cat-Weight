@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  cat_weight:
+    container_name: cat_weight
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+
+    # only needed inside docker; nginx will reach it via proxy_net
+    expose:
+      - "8002"
+
+    # Bind container port to host for local testing
+    ports:
+      - "8002:8002"
+
+    volumes:
+      - ./data:/app/data  # Persist database on host machine
+
+    networks:
+      - proxy_net
+
+networks:
+  proxy_net:
+    external: true

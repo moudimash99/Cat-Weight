@@ -1,6 +1,10 @@
 import sqlite3
+import os
 
-DB_NAME = "cat_data.db"
+# Create data directory if it doesn't exist
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+os.makedirs(DATA_DIR, exist_ok=True)
+DB_NAME = os.path.join(DATA_DIR, 'cat_data.db')
 
 # --- Your Data ---
 simba_data = [

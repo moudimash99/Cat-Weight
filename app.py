@@ -7,10 +7,15 @@ from dateutil.relativedelta import relativedelta
 import json
 import plotly
 import plotly.graph_objs as go
+import os
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_change_this_in_production'  # Change this to a secure key
-DB_NAME = "cat_data.db"
+
+# Create data directory if it doesn't exist
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+os.makedirs(DATA_DIR, exist_ok=True)
+DB_NAME = os.path.join(DATA_DIR, 'cat_data.db')
 
 # Simple user credentials (in production, use a real database with hashed passwords)
 USERS = {
@@ -140,7 +145,7 @@ def logout():
 def index():
     # Check if user is logged in
     if 'user' not in session:
-        return redirect(url_for('login'))
+        session['user'] = 'guest'  # Temporary: bypass login
     
     conn = sqlite3.connect(DB_NAME)
     try:
@@ -179,7 +184,7 @@ def index():
 @app.route('/add', methods=['POST'])
 def add_entry():
     if 'user' not in session:
-        return redirect(url_for('login'))
+        session['user'] = 'guest'  # Temporary: bypass login
     
     cat = request.form.get('cat_name')
     weight = request.form.get('weight')
@@ -204,7 +209,7 @@ def add_entry():
 @app.route('/delete/<int:entry_id>', methods=['POST'])
 def delete_entry(entry_id):
     if 'user' not in session:
-        return redirect(url_for('login'))
+        session['user'] = 'guest'  # Temporary: bypass login
     
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
