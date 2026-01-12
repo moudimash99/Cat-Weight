@@ -13,4 +13,5 @@ COPY . .
 ENV PYTHONUNBUFFERED=1
 
 # Initialize database and start Flask app
-CMD python init_db.py && gunicorn -w 3 -b 0.0.0.0:8002 app:app
+# CMD python init_db.py && gunicorn -w 3 -b 0.0.0.0:8002 app:app
+ CMD gunicorn -w 3 -b 0.0.0.0:8002 app:app
