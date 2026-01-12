@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
 import pandas as pd
 import numpy as np
@@ -9,7 +9,13 @@ import plotly
 import plotly.graph_objs as go
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key_change_this_in_production'  # Change this to a secure key
 DB_NAME = "cat_data.db"
+
+# Simple user credentials (in production, use a real database with hashed passwords)
+USERS = {
+    'moudimash99': 'mashaka99'
+}
 
 # --- Logic Functions ---
 def calculate_age_months(current_date, birth_date):
@@ -108,11 +114,34 @@ def create_interactive_plot(df, cat_name, ref_data, birth_date):
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
 
-    # Return as dict for Jinja tojson filter
-    return fig.to_dict()
+    # Convert to JSON for HTML
+    return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if username in USERS and USERS[username] == password:
+            session['user'] = username
+            return redirect(url_for('index'))
+        else:
+            return render_template('login.html', error='Invalid username or password')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    return redirect(url_for('login'))
 
 @app.route('/')
 def index():
+    # Check if user is logged in
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
     conn = sqlite3.connect(DB_NAME)
     try:
         df = pd.read_sql_query("SELECT * FROM weights ORDER BY date_str DESC", conn)
@@ -127,14 +156,7 @@ def index():
 
     if not df.empty:
         birth_date = pd.Timestamp("2025-08-30")
-        
-        # Ensure weight is numeric and date parses cleanly
-        df['weight'] = pd.to_numeric(df['weight'], errors='coerce')
-        df = df.dropna(subset=['weight'])
-        
-        df['date'] = pd.to_datetime(df['date_str'], errors='coerce')
-        df = df.dropna(subset=['date'])
-        
+        df['date'] = pd.to_datetime(df['date_str'])
         df['age_months'] = df['date'].apply(lambda x: calculate_age_months(x, birth_date))
         
         # Generate two separate interactive plots
@@ -151,10 +173,14 @@ def index():
                            simba_plot=simba_json, 
                            nala_plot=nala_json, 
                            table_data=table_data,
-                           today=today_str)
+                           today=today_str,
+                           username=session['user'])
 
 @app.route('/add', methods=['POST'])
 def add_entry():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
     cat = request.form.get('cat_name')
     weight = request.form.get('weight')
     date = request.form.get('date')
@@ -177,6 +203,9 @@ def add_entry():
 
 @app.route('/delete/<int:entry_id>', methods=['POST'])
 def delete_entry(entry_id):
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("DELETE FROM weights WHERE id = ?", (entry_id,))

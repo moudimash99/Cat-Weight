@@ -9,7 +9,13 @@
 </head>
 <body>
     <div class="container">
-        <h1>🐱 Simba & Nala Growth Tracker</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h1>🐱 Simba & Nala Growth Tracker</h1>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <span style="font-size: 14px; color: #666;">Welcome, <strong>{{ username }}</strong></span>
+                <a href="{{ url_for('logout') }}" style="background-color: #dc3545; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 14px;">Logout</a>
+            </div>
+        </div>
         
         <div class="card">
             <h3>Add New Measurement</h3>
@@ -18,87 +24,101 @@
                     <option value="Simba">Simba</option>
                     <option value="Nala">Nala</option>
                 </select>
-                
                 <input type="number" step="0.001" name="weight" placeholder="Weight (kg)" required>
-                
                 <input type="date" name="date" value="{{ today }}" required>
                 
                 <div style="display: flex; align-items: center; gap: 5px;">
                     <input type="checkbox" id="time-toggle" style="width: auto; margin: 0;">
                     <label for="time-toggle" style="font-size: 14px; user-select: none;">Set Time?</label>
                 </div>
-
                 <input type="time" name="time" id="time-input" style="display: none;">
-
                 <button type="submit">Add Entry</button>
             </form>
         </div>
 
         <div class="card chart-container">
+            <h3>Growth Charts</h3>
             {% if simba_plot and nala_plot %}
-                <div class="charts-row">
-                    <div id="simba-chart" class="chart-box"></div>
-                    <div id="nala-chart" class="chart-box"></div>
+                <div class="charts-row" style="display: flex; flex-wrap: wrap; gap: 20px;">
+                    <div id="simba-chart" style="flex: 1; min-width: 300px; height: 500px; border: 1px solid #ddd;"></div>
+                    <div id="nala-chart" style="flex: 1; min-width: 300px; height: 500px; border: 1px solid #ddd;"></div>
                 </div>
                 
                 <script>
-                    // Render Simba's Chart
-                    const simbaData = {{ simba_plot | tojson }};
-                    Plotly.newPlot('simba-chart', simbaData.data, simbaData.layout);
+                    // 1. Check if Plotly loaded
+                    if (typeof Plotly === 'undefined') {
+                        alert("Error: Plotly library not loaded! Check your internet connection.");
+                    } else {
+                        try {
+                            // 2. Load Data
+                            var simbaData = {{ simba_plot | safe }};
+                            var nalaData = {{ nala_plot | safe }};
 
-                    // Render Nala's Chart
-                    const nalaData = {{ nala_plot | tojson }};
-                    Plotly.newPlot('nala-chart', nalaData.data, nalaData.layout);
-                    
-                    // Debug: check what we received
-                    console.log("SIMBA:", simbaData);
-                    console.log("NALA:", nalaData);
+                            // 3. Log data to console for inspection
+                            console.log("Simba Data:", simbaData);
+                            console.log("Nala Data:", nalaData);
+
+                            // 4. Plot
+                            Plotly.newPlot('simba-chart', simbaData.data, simbaData.layout);
+                            Plotly.newPlot('nala-chart', nalaData.data, nalaData.layout);
+                            
+                        } catch (e) {
+                            console.error("Graphing Error:", e);
+                            alert("Something went wrong drawing the graph. Check console.");
+                        }
+                    }
                 </script>
             {% else %}
-                <p style="text-align:center;">No data yet. Run <code>python init_db.py</code> to load data!</p>
+                <p style="text-align:center; padding: 20px;">
+                    No graph data available. (Table below should still show data)
+                </p>
             {% endif %}
         </div>
 
         <div class="card">
-            <h3>History</h3>
-            <div class="table-wrapper">
-                {% if table_data %}
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Cat Name</th>
-                                <th>Date & Time</th>
-                                <th>Weight (kg)</th>
-                                <th style="width: 40px; text-align: center;">Delete</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in table_data %}
-                                <tr>
-                                    <td>{{ row[1] }}</td>
-                                    <td>{{ row[2] }}</td>
-                                    <td>{{ row[3] }}</td>
-                                    <td style="text-align: center;">
-                                        <form method="POST" action="/delete/{{ row[0] }}" style="display: inline;">
-                                            <button type="submit" class="delete-btn" title="Delete entry" onclick="return confirm('Are you sure?');">✕</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                {% else %}
-                    <p>No data.</p>
-                {% endif %}
-            </div>
-        </div>
+    <h3>History</h3>
+    <div class="table-wrapper">
+        {% if table_data %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Cat Name</th>
+                        <th>Date & Time</th>
+                        <th>Weight (kg)</th>
+                        <th style="width: 50px; text-align: center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in table_data %}
+                        <tr>
+                            <td>{{ row[1] }}</td>
+                            <td>{{ row[2] }}</td>
+                            <td>{{ row[3] }}</td>
+                            <td style="text-align: center;">
+                                <form method="POST" action="/delete/{{ row[0] }}" style="display:inline;">
+                                    <button type="submit" class="delete-btn" 
+                                            onclick="return confirm('Delete this entry?');"
+                                            style="background: #ff4d4d; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">
+                                        ✕
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p style="padding: 10px;">No history data found.</p>
+        {% endif %}
+    </div>
+</div>
     </div>
 
     <script>
         const timeToggle = document.getElementById('time-toggle');
         const timeInput = document.getElementById('time-input');
 
-        // Pre-fill with current time
+        // Pre-fill time
         function setCurrentTime() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -110,14 +130,13 @@
             if (this.checked) {
                 setCurrentTime();
                 timeInput.style.display = 'block';
-                timeInput.required = true; // Make it required if shown
+                timeInput.required = true;
             } else {
                 timeInput.style.display = 'none';
                 timeInput.required = false;
-                timeInput.value = ''; // Clear value if hidden
+                timeInput.value = '';
             }
         });
     </script>
-
 </body>
 </html>
