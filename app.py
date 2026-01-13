@@ -147,6 +147,12 @@ def index():
     if 'user' not in session:
         return redirect(url_for('login'))
     
+    # Get duration from query parameters (default to 2 months)
+    duration_months = float(request.args.get('duration', 2.0))
+    
+    today = datetime.today()
+    start_date = today - timedelta(days=duration_months * 30)  # Approximate: 1 month = 30 days
+    
     conn = sqlite3.connect(DB_NAME)
     try:
         df = pd.read_sql_query("SELECT * FROM weights ORDER BY date_str DESC", conn)
@@ -160,16 +166,20 @@ def index():
     table_data = []
 
     if not df.empty:
-        birth_date = pd.Timestamp("2025-08-30")
+        # Filter by duration
         df['date'] = pd.to_datetime(df['date_str'])
-        df['age_months'] = df['date'].apply(lambda x: calculate_age_months(x, birth_date))
+        df_filtered = df[df['date'] >= start_date]
         
-        # Generate two separate interactive plots
-        simba_json = create_interactive_plot(df, "Simba", MALE_REF, birth_date)
-        nala_json = create_interactive_plot(df, "Nala", FEMALE_REF, birth_date)
+        birth_date = pd.Timestamp("2025-08-30")
+        df_filtered['age_months'] = df_filtered['date'].apply(lambda x: calculate_age_months(x, birth_date))
         
-        # Pass raw data to template for custom rendering
-        table_data = df[['id', 'cat_name', 'date_str', 'weight']].values.tolist()
+        if not df_filtered.empty:
+            # Generate two separate interactive plots
+            simba_json = create_interactive_plot(df_filtered, "Simba", MALE_REF, birth_date)
+            nala_json = create_interactive_plot(df_filtered, "Nala", FEMALE_REF, birth_date)
+            
+            # Pass raw data to template for custom rendering (ordered by most recent)
+            table_data = df_filtered.sort_values('date_str', ascending=False)[['id', 'cat_name', 'date_str', 'weight']].values.tolist()
 
     # Pass today's date for the input field default
     today_str = datetime.today().strftime('%Y-%m-%d')
@@ -179,7 +189,8 @@ def index():
                            nala_plot=nala_json, 
                            table_data=table_data,
                            today=today_str,
-                           username=session['user'])
+                           username=session['user'],
+                           duration=duration_months)
 
 @app.route('/add', methods=['POST'])
 def add_entry():

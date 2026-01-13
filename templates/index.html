@@ -37,6 +37,26 @@
             </form>
         </div>
 
+        <div class="card">
+            <h3>Filter by Duration</h3>
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <label for="duration-select" style="display: block; margin-bottom: 5px; font-weight: 500;">Show Last</label>
+                    <select id="duration-select" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;">
+                        <option value="0.5">0.5 months (2 weeks)</option>
+                        <option value="1">1 month</option>
+                        <option value="1.5">1.5 months</option>
+                        <option value="2" selected>2 months</option>
+                        <option value="3">3 months</option>
+                        <option value="6">6 months</option>
+                        <option value="12">1 year</option>
+                        <option value="24">2 years</option>
+                    </select>
+                </div>
+                <button type="button" id="apply-filter" onclick="applyDurationFilter()" style="align-self: flex-end; padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply</button>
+            </div>
+        </div>
+
         <div class="card chart-container">
             <h3>Growth Charts</h3>
             {% if simba_plot and nala_plot %}
@@ -136,6 +156,25 @@
                 timeInput.style.display = 'none';
                 timeInput.required = false;
                 timeInput.value = '';
+            }
+        });
+
+        // Duration filter with localStorage caching
+        function applyDurationFilter() {
+            const duration = document.getElementById('duration-select').value;
+            
+            // Cache in localStorage
+            localStorage.setItem('catWeightDuration', duration);
+            
+            // Reload with new duration
+            window.location.href = `/?duration=${duration}`;
+        }
+
+        // Load cached duration on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            const cachedDuration = localStorage.getItem('catWeightDuration');
+            if (cachedDuration) {
+                document.getElementById('duration-select').value = cachedDuration;
             }
         });
     </script>
